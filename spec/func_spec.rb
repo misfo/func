@@ -5,6 +5,20 @@ describe Func do
     expect(Func::VERSION).not_to be nil
   end
 
+  describe '.new_subclass' do
+    it 'raises an error when given multiple splats' do
+      error = Func::Signature::MultipleSplatsError
+      expect { Func[:a, '*b', '*c'] }.to raise_error(error)
+      expect { Func['*a', :b, '*c'] }.to raise_error(error)
+    end
+
+    it "raises an error when the block isn't last" do
+      error = Func::Signature::InvalidBlockPositionError
+      expect { Func['&a', :b] }.to raise_error(error)
+      expect { Func[:a, '&b', :c] }.to raise_error(error)
+    end
+  end
+
   describe 'a "user" subclass' do
     let(:add) do
       Class.new(Func[:a, :b]) do

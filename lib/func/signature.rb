@@ -1,26 +1,18 @@
 class Func
 
-  class Signature < Struct.new(:names)
-    def block_name
-      return @block_name if defined?(@block_name)
-      @block_name = names.last.to_s[/\A&(.+)/, 1]
+  class Signature
+    class InvalidBlockPositionError < ArgumentError; end
+    class MultipleSplatsError < ArgumentError; end
+
+    def initialize(names)
+      @names = names
+      interpret_and_validate!
     end
+
+    attr_reader :names, :arg_names, :block_name, :splat_name, :splat_index
 
     def block?
       !block_name.nil?
-    end
-
-    def arg_names
-      @arg_names ||= begin
-        ns = if block?
-          names[0...-1]
-        else
-          names.dup
-        end
-        ns[splat_index] = splat_name if variadic?
-
-        ns
-      end
     end
 
     def arg_count
@@ -31,21 +23,23 @@ class Func
       !splat_index.nil?
     end
 
-    def splat_name()  splat_name_and_index && splat_name_and_index.first end
-    def splat_index() splat_name_and_index && splat_name_and_index.last  end
-
     private
 
-    def splat_name_and_index
-      # @splat_name_and_index ||= begin
-        names.each_with_index do |name, i|
-          if splat_name = name.to_s[/\A\*(.+)/, 1]
-            return splat_name, i
-          end
-        end
+    def interpret_and_validate!
+      @arg_names = []
 
-      nil
-      # end
+      names.each_with_index do |name, i|
+        string = name.to_s
+        if splat_name = string[/\A\*(.+)/, 1]
+          raise MultipleSplatsError unless @splat_index.nil?
+          @splat_index = i
+          @arg_names << splat_name
+        elsif @block_name = string[/\A&(.+)/, 1]
+          raise InvalidBlockPositionError unless i == names.size - 1
+        else
+          @arg_names << string
+        end
+      end
     end
 
 
