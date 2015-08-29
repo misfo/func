@@ -8,12 +8,16 @@ class Func
       signature = Signature.new names_in_signature
 
       Class.new(self) do
+        @arity = signature.arity
+
         class << self
           def call(*args, &block)
             new(*args, &block).call
           end
 
           alias :[] :call
+
+          attr_reader :arity
         end
 
         signature.args.each_with_index do |arg, i|

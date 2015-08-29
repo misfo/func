@@ -27,8 +27,18 @@ class Func
     def has_splat?() @has_splat end
     def has_block?() @has_block end
 
+    alias :variadic? :has_splat?
+
     def arg_count
       args.size - (has_block? ? 1 : 0)
+    end
+
+    def arity
+      if variadic?
+        - arg_count
+      else
+        arg_count
+      end
     end
 
     class Arg < Struct.new(:sigil, :name, :after_splat)

@@ -19,6 +19,20 @@ describe Func do
     end
   end
 
+  describe 'a direct subclass' do
+    describe '#arity' do
+      it 'should work the same as ::Method#arity' do
+        # examples from http://ruby-doc.org/core-2.2.3/Method.html#method-i-arity
+        expect(Func[].arity).to eq 0
+        expect(Func[:a].arity).to eq 1
+        expect(Func['*a'].arity).to eq -1
+        expect(Func[:a, :b].arity).to eq 2
+        expect(Func[:a, :b, '*c'].arity).to eq -3
+        expect(Func[:a, :b, '*c', '&d'].arity).to eq -3
+      end
+    end
+  end
+
   describe 'a "user" subclass' do
     let(:add) do
       Class.new(Func[:a, :b]) do
