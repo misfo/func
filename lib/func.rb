@@ -1,10 +1,11 @@
-require "func/version"
+require 'func/signature'
+require 'func/version'
 
 class Func
+
   class << self
-    def new_subclass(*arg_names)
-      block_name = arg_names.last.to_s[/\A&(.+)/, 1]
-      arg_names.pop unless block_name.nil?
+    def new_subclass(*names_in_signature)
+      signature = Signature.new names_in_signature
 
       Class.new(self) do
         class << self
@@ -15,12 +16,20 @@ class Func
           alias :[] :call
         end
 
-        arg_names.each_with_index do |arg_name, i|
-          define_method(arg_name) { @_args[i] }
+        signature.arg_names.each_with_index do |arg_name, i|
+          if !signature.variadic? || i < signature.splat_index
+            define_method(arg_name) { @_args[i] }
+          elsif i > signature.splat_index
+            negative_index = i - signature.arg_count
+            define_method(arg_name) { @_args[negative_index] }
+          else
+            range = i..(i - signature.arg_count)
+            define_method(arg_name) { @_args[range] }
+          end
         end
 
-        unless block_name.nil?
-          define_method(block_name) { @_block }
+        if signature.block?
+          define_method(signature.block_name) { @_block }
         end
       end
     end
