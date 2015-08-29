@@ -16,20 +16,19 @@ class Func
           alias :[] :call
         end
 
-        signature.arg_names.each_with_index do |arg_name, i|
-          if !signature.variadic? || i < signature.splat_index
-            define_method(arg_name) { @_args[i] }
-          elsif i > signature.splat_index
-            negative_index = i - signature.arg_count
-            define_method(arg_name) { @_args[negative_index] }
+        signature.args.each_with_index do |arg, i|
+          if arg.is_block?
+            define_method(arg.name) { @_block }
           else
-            range = i..(i - signature.arg_count)
-            define_method(arg_name) { @_args[range] }
+            index_or_range = if arg.is_splat?
+              i..(i - signature.arg_count)
+            elsif arg.after_splat?
+              i - signature.arg_count
+            else
+              i
+            end
+            define_method(arg.name) { @_args[index_or_range] }
           end
-        end
-
-        if signature.block?
-          define_method(signature.block_name) { @_block }
         end
       end
     end
