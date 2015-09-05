@@ -1,43 +1,54 @@
-require 'func/signature'
 require 'func/version'
 
 class Func
 
   class << self
-    def new_subclass(*names_in_signature)
-      signature = Signature.new names_in_signature
-
+    def sig(&signature)
       Class.new(self) do
-        @arity = signature.arity
+        @_signature = signature
 
-        class << self
-          def call(*args, &block)
-            new(*args, &block).call
-          end
-
-          alias :[] :call
-
-          attr_reader :arity
-        end
-
-        signature.args.each_with_index do |arg, i|
-          if arg.is_block?
-            define_method(arg.name) { @_block }
-          else
-            index_or_range = if arg.is_splat?
-              i..(i - signature.arg_count)
-            elsif arg.after_splat?
-              i - signature.arg_count
-            else
-              i
-            end
-            define_method(arg.name) { @_args[index_or_range] }
-          end
+        each_param_reader do |name, body|
+          define_method(name, &body)
         end
       end
     end
 
-    alias :[] :new_subclass
+    def call(*args, &block)
+      new(*args, &block).call
+    end
+
+    alias :[] :call
+
+    def arity
+      @_signature.arity
+    end
+
+    private
+
+    def each_param_reader
+      after_rest = false
+      @_signature.parameters.each_with_index do |(type, name), i|
+        body = case type
+        when :block
+          proc { @_block }
+        when :rest
+          after_rest = true
+          range = i..(i - @_signature.arity.abs)
+          proc { @_args[range] }
+        when :opt
+          index = if after_rest
+                    i - @_signature.arity.abs
+                  else
+                    i
+                  end
+          proc { @_args[index] }
+        else
+          raise NotImplementedError, type
+        end
+
+        yield name, body
+      end
+    end
   end
 
   def initialize(*args, &block)
@@ -45,7 +56,7 @@ class Func
   end
 
   def call
-    raise NotImplementedError, 'Your Func must implement a no-arg `call` method'
+    raise NotImplementedError, 'Func must be subclassed with a no-arg `call` method'
   end
 
 end
