@@ -17,7 +17,16 @@ describe Func do
     end
 
     it 'is callable' do
+      expect(add.(1, 2)).to eq 3
+    end
+
+    it 'quacks like a lambda' do
       expect(add[1, 2]).to eq 3
+      expect(add.to_proc.(1, 2)).to eq 3
+      # expect([[1, 2], [3, 4]].map(&add)).to eq [3, 7]
+      expect(add.arity).to eq 2
+      expect(add.lambda?).to eq true
+      expect(add.parameters).to eq [[:req, :a], [:req, :b]]
     end
 
     context 'when a block is declared' do
@@ -78,6 +87,23 @@ describe Func do
           expect(func[1, 2]).to eq [1, 2, []]
           expect { func[1] }.to raise_error(ArgumentError)
         end
+      end
+    end
+
+    describe 'instance' do
+      let(:add_1_2) { add.new(1, 2) }
+
+      it 'is callable' do
+        expect(add_1_2.()).to eq 3
+      end
+
+      it 'quacks like a lambda' do
+        expect(add_1_2[]).to eq 3
+        expect(add_1_2.to_proc.()).to eq 3
+        # expect([[1, 2], [3, 4]].map(&add)).to eq [3, 7]
+        expect(add_1_2.arity).to eq 0
+        expect(add_1_2.lambda?).to eq true
+        expect(add_1_2.parameters).to eq []
       end
     end
   end

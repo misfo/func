@@ -1,12 +1,17 @@
+require 'func/callable'
+
 class Func
   module CallInstance
+    include Callable
+
     def call(*args, &block)
       new(*args, &block).call
     end
 
-    alias :[] :call
+    private
 
-    def arity()      instance_method(:initialize).arity      end
-    def parameters() instance_method(:initialize).parameters end
+    def signature_method
+      instance_method(:initialize)
+    end
   end
 end
