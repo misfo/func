@@ -90,6 +90,24 @@ describe Func do
       end
     end
 
+    context 'when it has parameter defaults' do
+      let(:send_to_arg) do
+        Class.new(Func) do
+          def initialize(method, arg = 'Yeehaw!') super end
+
+          def call
+            @arg.public_send @method
+          end
+        end
+      end
+
+      it 'behaves like a lambda' do
+        expect(send_to_arg.(:upcase, 'whoa')).to eq 'WHOA'
+        expect(send_to_arg.(:upcase)).to eq 'YEEHAW!'
+        expect { send_to_arg.() }.to raise_error(ArgumentError)
+      end
+    end
+
     describe 'instance' do
       let(:add_1_2) { add.new(1, 2) }
 

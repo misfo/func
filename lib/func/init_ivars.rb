@@ -24,7 +24,7 @@ class Func
         when :rest
           after_rest = true
           i..(i - init.arity.abs)
-        when :req
+        when :opt, :req
           if after_rest
             i - init.arity.abs
           else
