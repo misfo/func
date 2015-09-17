@@ -2,45 +2,76 @@ class Func
   module InitIvars
 
     def initialize(*args, &block)
-      each_param_with_arg_index do |name, index|
-        instance_variable_set("@#{name}", args[index])
+      params = Params.new method(:initialize)
+      if block && !params.block?
+        raise ArgumentError, "#{self.class}#initialize does not accept a block"
       end
-      if block
-        name = block_param_name
-        raise ArgumentError, "#{self.class}#initialize does not accept a block" if name.nil?
-        instance_variable_set("@#{name}", block)
-      end
-    end
+      kwargs = args.pop if params.keys?
 
-    private
-
-    def each_param_with_arg_index
-      init = method :initialize
-      after_rest = false
-      init.parameters.each_with_index do |(type, name), i|
-        arg_index = case type
-        when :block
-          nil
-        when :rest
-          after_rest = true
-          i..(i - init.arity.abs)
-        when :opt, :req
-          if after_rest
-            i - init.arity.abs
-          else
-            i
-          end
-        else
-          raise NotImplementedError, type
+      params.each_with_arg_index do |name, index|
+        value = case index
+        when Numeric, Range then args[index]
+        when Symbol         then kwargs.fetch(index)
+        else                     block
         end
 
-        yield name, arg_index if arg_index
+        instance_variable_set("@#{name}", value)
       end
     end
 
-    def block_param_name
-      type, name = method(:initialize).parameters.last
-      name if type == :block
+    class Params
+      def initialize(method)
+        @params = method.parameters
+      end
+
+      def each_with_arg_index
+        negative_index = nil
+        @params.each_with_index do |(type, name), i|
+          arg_index = case type
+          when :block
+            nil
+          when :rest
+            negative_index = -1 - reqs_after_rest
+            i..negative_index
+          when :opt, :req
+            if negative_index
+              negative_index += 1
+            else
+              i
+            end
+          else # kwarg
+            name
+          end
+
+          yield name, arg_index
+        end
+      end
+
+      def keys?
+        @params.any? { |(type, _)| [:key, :keyreq].include? type }
+      end
+
+      def block?
+        type, _ = @params.last
+        type == :block
+      end
+
+      private
+
+      def reqs_after_rest
+        count = nil
+        @params.each do |(type, _), i|
+          if count.nil?
+            count = 0 if type == :rest
+          elsif type == :req
+            count += 1
+          else
+            break
+          end
+        end
+
+        count
+      end
     end
 
   end
